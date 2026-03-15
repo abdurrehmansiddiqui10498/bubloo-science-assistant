@@ -4,8 +4,8 @@ const SUGGESTIONS = [
   { label: "📚 Show me blog posts", query: "What blog posts are available on the website?" },
   { label: "👥 Who's on the team?", query: "Tell me about the team members" },
   { label: "📧 Contact info", query: "How can I contact the Bubloo Scientist team?" },
-  { label: "🧪 What is Chemistry?", query: "Tell me about the Chemistry blog post" },
-  { label: "🔬 Science topics", query: "What science topics does the website cover?" },
+  { label: "🌌 What is a black hole?", query: "What is a black hole and how does it form?" },
+  { label: "🧬 How does DNA work?", query: "How does DNA store genetic information?" },
 ];
 
 interface Props {

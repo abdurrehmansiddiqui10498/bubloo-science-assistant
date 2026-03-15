@@ -16,7 +16,7 @@ export function ChatWindow({ onClose }: Props) {
       id: "welcome",
       role: "assistant",
       content:
-        "👋 Hi there! I'm **Bubloo**, your science assistant! 🔬\n\nI can help you explore blog posts, learn about the team, find contact info, and discover science topics.\n\nWhat would you like to know?",
+        "👋 Hi there! I'm **Bubloo**, your science assistant! 🔬\n\nI can help you explore blog posts, learn about the team, find contact info, and discover science topics.\n\n🌌 **New:** Ask me any science question and I'll use AI to find the answer!\n\nWhat would you like to know?",
     },
   ]);
   const [input, setInput] = useState("");
@@ -35,8 +35,8 @@ export function ChatWindow({ onClose }: Props) {
   }, [messages, isTyping, scrollToBottom]);
 
   const sendMessage = useCallback(
-    (text: string) => {
-      if (!text.trim()) return;
+    async (text: string) => {
+      if (!text.trim() || isTyping) return;
 
       const userMsg: Message = {
         id: Date.now().toString(),
@@ -47,19 +47,28 @@ export function ChatWindow({ onClose }: Props) {
       setInput("");
       setIsTyping(true);
 
-      // Simulate typing delay
-      setTimeout(() => {
-        const response = generateResponse(text);
+      try {
+        const response = await generateResponse(text);
         const botMsg: Message = {
           id: (Date.now() + 1).toString(),
           role: "assistant",
           content: response,
         };
         setMessages((prev) => [...prev, botMsg]);
+      } catch {
+        setMessages((prev) => [
+          ...prev,
+          {
+            id: (Date.now() + 1).toString(),
+            role: "assistant",
+            content: "😅 Something went wrong. Please try again!",
+          },
+        ]);
+      } finally {
         setIsTyping(false);
-      }, 600 + Math.random() * 800);
+      }
     },
-    []
+    [isTyping]
   );
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -83,7 +92,7 @@ export function ChatWindow({ onClose }: Props) {
           </div>
           <div>
             <h3 className="text-sm font-semibold text-foreground">Bubloo Assistant</h3>
-            <p className="text-[10px] text-primary font-mono">● Online</p>
+            <p className="text-[10px] text-primary font-mono">● Online — AI Powered</p>
           </div>
         </div>
         <div className="flex gap-1">

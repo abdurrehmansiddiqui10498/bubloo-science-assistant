@@ -1,7 +1,7 @@
 import { WEBSITE_INFO, TEAM_MEMBERS, BLOG_POSTS, CATEGORIES, type BlogPost } from "./knowledgeBase";
+import { supabase } from "@/integrations/supabase/client";
 
-// Local knowledge-based chat engine (no AI API needed)
-// Uses keyword matching and structured knowledge to answer questions
+// Local knowledge-based chat engine with AI fallback for science questions
 
 function normalize(text: string): string {
   return text.toLowerCase().replace(/[^a-z0-9\s]/g, "");
@@ -16,7 +16,29 @@ function findRelevantBlogs(query: string): BlogPost[] {
   });
 }
 
-export function generateResponse(userMessage: string): string {
+const SCIENCE_KEYWORDS = [
+  "science", "physics", "chemistry", "biology", "math", "atom", "molecule",
+  "cell", "dna", "gene", "evolution", "gravity", "energy", "force", "element",
+  "compound", "reaction", "equation", "formula", "experiment", "hypothesis",
+  "theory", "quantum", "electron", "proton", "neutron", "planet", "star",
+  "galaxy", "universe", "space", "light", "wave", "frequency", "magnet",
+  "electric", "current", "voltage", "circuit", "acid", "base", "ph",
+  "photosynthesis", "ecosystem", "climate", "weather", "temperature",
+  "speed", "velocity", "acceleration", "mass", "weight", "density",
+  "pressure", "volume", "area", "calculate", "solve", "explain", "how does",
+  "what is", "why does", "how do", "computer", "programming", "algorithm",
+  "code", "software", "technology", "robot", "ai", "artificial", "machine",
+  "neural", "data", "network", "internet", "virus", "bacteria", "protein",
+  "organ", "body", "human", "animal", "plant", "water", "oxygen", "carbon",
+  "nitrogen", "hydrogen", "periodic", "table", "newton", "einstein",
+];
+
+function isScienceQuestion(query: string): boolean {
+  const q = normalize(query);
+  return SCIENCE_KEYWORDS.some((kw) => q.includes(kw));
+}
+
+export function generateLocalResponse(userMessage: string): string | null {
   const q = normalize(userMessage);
 
   // Contact
@@ -91,7 +113,7 @@ export function generateResponse(userMessage: string): string {
 
   // Greeting
   if (q.includes("hello") || q.includes("hi") || q.includes("hey") || q.includes("help")) {
-    return `👋 Hello! I'm **Bubloo**, your science assistant! 🔬\n\nI can help you with:\n- 📚 Finding blog posts and articles\n- 👥 Learning about the team\n- 📧 Getting contact information\n- 🧪 Exploring science topics\n\nWhat would you like to know?`;
+    return `👋 Hello! I'm **Bubloo**, your science assistant! 🔬\n\nI can help you with:\n- 📚 Finding blog posts and articles\n- 👥 Learning about the team\n- 📧 Getting contact information\n- 🧪 Exploring science topics\n- 🌌 Answering science questions using AI!\n\nWhat would you like to know?`;
   }
 
   // Thanks
@@ -99,6 +121,30 @@ export function generateResponse(userMessage: string): string {
     return `You're welcome! 😊 Science is always more fun when shared. Feel free to ask me anything else about Bubloo Scientist! 🔬`;
   }
 
-  // Default
-  return `🤔 That's an interesting question! I'm best at helping with:\n\n- 📚 Blog posts and articles on the website\n- 👥 Team member information\n- 📧 Contact details\n- 🔬 Science topics covered on the site\n\nTry asking me about one of these, or visit [bublooscientist.com](${WEBSITE_INFO.website}) to explore directly!`;
+  return null; // No local match
+}
+
+export async function generateResponse(userMessage: string): Promise<string> {
+  // Try local knowledge base first
+  const localResponse = generateLocalResponse(userMessage);
+  if (localResponse) return localResponse;
+
+  // If it's a science question, use AI
+  if (isScienceQuestion(userMessage)) {
+    try {
+      const { data, error } = await supabase.functions.invoke("science-chat", {
+        body: { question: userMessage },
+      });
+
+      if (error) throw error;
+      if (data?.answer) return data.answer;
+      if (data?.error) throw new Error(data.error);
+    } catch (e) {
+      console.error("AI fallback error:", e);
+      return `🔬 I tried to look that up but ran into an issue. In the meantime, you can explore science topics at [bublooscientist.com](${WEBSITE_INFO.website})!\n\nOr try asking me about our blog posts, team, or contact info.`;
+    }
+  }
+
+  // Default — not a science question and not in knowledge base
+  return `🤔 That's an interesting question! I can help with:\n\n- 📚 Blog posts and articles on the website\n- 👥 Team member information\n- 📧 Contact details\n- 🔬 **Science questions** (I'll use AI to find the answer!)\n\nTry asking me a science question or something about the website!`;
 }
